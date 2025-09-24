@@ -152,3 +152,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // ==================== INITIAL PAGE LOAD ====================
     updateAllVisuals(currentData);
 });
+async function uploadNetCDF() {
+  const f = document.getElementById("netcdf-file").files[0];
+  if (!f) return alert("Choose a NetCDF file first.");
+  const fd = new FormData();
+  fd.append("file", f);
+  const res = await fetch("http://localhost:8000/api/upload-netcdf", {
+    method: "POST",
+    body: fd
+  });
+  const j = await res.json();
+  console.log("upload response", j);
+  alert("Upload accepted: " + (j.filename || ""));
+}
+async function fetchProfiles({limit=200, bbox=null}={}) {
+  let url = new URL("http://localhost:8000/api/profiles");
+  url.searchParams.set("limit", limit);
+  if (bbox) {
+    // bbox = [min_lon, min_lat, max_lon, max_lat]
+    url.searchParams.set("min_lon", bbox[0]);
+    url.searchParams.set("min_lat", bbox[1]);
+    url.searchParams.set("max_lon", bbox[2]);
+    url.searchParams.set("max_lat", bbox[3]);
+  }
+  const resp = await fetch(url.toString());
+  const data = await resp.json();
+  return data.profiles;
+}
+const ws = new WebSocket("ws://localhost:8000/ws/chat");
+ws.onopen = () => console.log("ws open");
+ws.onmessage = (ev) => {
+  const msg = JSON.parse(ev.data);
+  console.log("ws msg", msg);
+  // render message in chat UI
+};
+function sendChatMessage(text) {
+  ws.send(JSON.stringify({type:"chat", message: text}));
+}
